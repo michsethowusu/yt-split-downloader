@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ruff_cache/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.venv-*/
+.idea/
+.vscode/
+.DS_Store
+
+# runtime data (never commit media or queues)
+yt-split-data/
+*.mp4
+*.webm
+*.m4a
+*.part
+*.url
+*.log

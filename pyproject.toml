@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yt-split-downloader"
+version = "0.1.0"
+description = "Split YouTube bulk downloading across two machines: resolve direct media URLs on a trusted-IP host, then download the bytes on a second host (SSH/VPS/Modal/local)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Mich-Seth Owusu", email = "michsethowusu@gmail.com" }]
+keywords = ["youtube", "yt-dlp", "aria2", "downloader", "modal", "ssh", "datacenter-ip"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Internet",
+]
+dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+modal = ["modal>=0.60"]
+dev = ["ruff"]
+
+[project.scripts]
+yt-split-downloader = "yt_split_downloader.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/michsethowusu/yt-split-downloader"
+
+[tool.setuptools.packages.find]
+include = ["yt_split_downloader*"]
+
+[tool.setuptools.package-data]
+yt_split_downloader = ["modal_app.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "FURB"]
+ignore = [
+    "UP045",  # keep Optional[...] for Python 3.9 friendliness
+    "BLE001",  # broad excepts are intentional at backend boundaries
+]
+
+[tool.ruff.format]
+quote-style = "double"

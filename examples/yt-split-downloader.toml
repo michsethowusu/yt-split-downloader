@@ -1,0 +1,37 @@
+# yt-split-downloader example configuration
+#
+# Two roles:
+#   resolve -> your trusted-IP machine (home/office PC)
+#   worker  -> wherever the bytes should land (the same PC, a VPS, or Modal)
+
+[general]
+urls_file = "urls.txt"
+project_dir = "yt-split-data"
+format = "bv*[protocol=https]"
+resolve_delay = 2.5
+batch = 40
+hwm = 80
+poll_interval = 20
+
+[download]
+workers = 5
+connections = 16
+timeout = 3600
+validate = true
+min_bytes = 65536
+
+[backend]
+type = "ssh"
+host = "myserver"
+remote_dir = "/data/yt-split"
+remote_python = "python3"
+tmux = true
+
+# To download on this same machine instead, use:
+#   type = "local"
+#   local_dir = "/data/yt-split"
+#
+# To use Modal instead, use:
+#   type = "modal"
+#   modal_app = "yt-split-downloader"
+#   modal_volume = "yt-split-downloader"
