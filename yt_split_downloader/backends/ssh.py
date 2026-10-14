@@ -8,6 +8,7 @@ videos are pulled back with rsync.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -29,6 +30,8 @@ class SshBackend(Backend):
         self.host = cfg.backend.host
         self.remote = cfg.backend.remote_dir.rstrip("/")
         self.python = cfg.backend.remote_python
+        # one worker session per remote_dir, so several projects can share a host
+        self.session = SESSION + "_" + re.sub(r"[^A-Za-z0-9]+", "_", self.remote).strip("_")[-48:]
         self.ssh_opts = list(cfg.backend.ssh_options)
 
     # -- plumbing ----------------------------------------------------------
@@ -36,7 +39,6 @@ class SshBackend(Backend):
         cmd = ["ssh", *self.ssh_opts, self.host, command]
         return subprocess.run(
             cmd,
-            capture_output=capture,
             text=True,
             check=False,
             stdout=subprocess.PIPE if capture else None,
@@ -48,7 +50,9 @@ class SshBackend(Backend):
         if ignore_existing:
             cmd.append("--ignore-existing")
         cmd += ["-e", "ssh " + " ".join(self.ssh_opts), src, dst]
-        subprocess.run(cmd, check=True)
+        rc = subprocess.run(cmd).returncode
+        if rc not in (0, 24):  # 24 = source files vanished (a download finished mid-transfer)
+            raise subprocess.CalledProcessError(rc, cmd)
 
     # -- lifecycle ---------------------------------------------------------
     def prepare(self) -> None:
@@ -93,7 +97,7 @@ class SshBackend(Backend):
         self._rsync(f"{local_queue}/", f"{self.host}:{self.remote}/queue/")
 
     def ensure_worker(self) -> None:
-        running = self._ssh(f"tmux has-session -t {SESSION} 2>/dev/null").returncode == 0
+        running = self._ssh(f"tmux has-session -t {self.session} 2>/dev/null").returncode == 0
         if running:
             return
         command = (
@@ -103,7 +107,7 @@ class SshBackend(Backend):
             f"--poll {self.cfg.general.poll_interval} >> {self.remote}/logs/worker.log 2>&1"
         )
         if self.cfg.backend.tmux:
-            self._ssh(f"tmux new-session -d -s {SESSION} {command!r}", capture=True)
+            self._ssh(f"tmux new-session -d -s {self.session} {command!r}", capture=True)
         else:
             self._ssh(f"nohup sh -c {command!r} >/dev/null 2>&1 &", capture=True)
 
@@ -121,7 +125,7 @@ class SshBackend(Backend):
             fh.writelines(f"youtube {video_id}\n" for video_id in sorted(remote_ids - known))
 
     def stop_worker(self) -> None:
-        self._ssh(f"tmux kill-session -t {SESSION} 2>/dev/null", capture=True)
+        self._ssh(f"tmux kill-session -t {self.session} 2>/dev/null", capture=True)
 
     def close(self) -> None:
         # Leave the worker running between resolver passes.
